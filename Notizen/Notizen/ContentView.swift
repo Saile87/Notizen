@@ -6,28 +6,37 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct ContentView: View {
     
-    @State private var notizen: [String] = ["Staub Saugen", "Einkaufen", "Aufräumen"]
-    @State private var notiz = ""
+    @Environment(\.managedObjectContext) var moc
+    @FetchRequest(sortDescriptors: [
+        SortDescriptor(\.inhalt, order: .reverse)
+    ]) var meineNotizen: FetchedResults<MyNotiz>
+    @State var notiz = ""
     
     var body: some View {
         NavigationView {
             VStack {
                 List {
-                    ForEach(notizen, id: \.self) { notiz in
-                        Text(notiz)
+                    ForEach(meineNotizen) { notiz in
+                        Text(notiz.inhalt ?? "Eroor")
                     }
                     .onDelete(perform: { indexSet in
-                        notizen.remove(atOffsets: indexSet)
+                       
                     })
                 }
                 .navigationTitle("Notizen")
                 HStack {
                     TextField("Neue Notiz", text: $notiz)
                     Button("Hinzufügen") {
-                        notizen.append(notiz)
+                        let neueNotiz = MyNotiz(context: moc)
+                        neueNotiz.id = UUID()
+                        neueNotiz.inhalt = notiz
+                        
+                        try? moc.save()
+                        
                         notiz = ""
                     }
                 } .padding(.horizontal)
@@ -36,8 +45,11 @@ struct ContentView: View {
     }
 }
 
+
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
+            .environment(\.managedObjectContext, ControlData(name: "Model").container.viewContext)
     }
 }
+
